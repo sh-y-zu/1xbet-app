@@ -98,7 +98,7 @@ wss.on('connection', async (ws) => {
 
       // Register the Timer
 
-     Timer =  MainTimer(60*2, ()=>{
+     Timer =  MainTimer(60*28, ()=>{
         console.log('Refreshing ...')
         console.log('Threads : ', threads)
         for (let i of threads) {
