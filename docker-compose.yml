@@ -1,0 +1,13 @@
+version: "2"
+services:
+  server:
+    image: "shehandezen/game-server"
+    environment:
+      - NODE_ENV=production
+    ports:
+      - 5000:5000
+
+  capture:
+    image: "shehandezen/game-capture"
+    environment: 
+      - WS_SERVER=http://server:5000

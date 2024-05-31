@@ -6,7 +6,7 @@ const getPeriod = (rounds = 1500, days = 30, hours = 24) => {
   return (60 / ((rounds / days) / hours)) * 60 * 1000
 }
 
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ port: 5000 });
 
 let dataString
 const clients = []
