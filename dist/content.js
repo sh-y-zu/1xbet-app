@@ -104,9 +104,7 @@ window.onload = () => {
           clearInterval(crashTimer)
         }
       }, 10)
-    } else {
-      chrome.runtime.sendMessage(['DISCONNECTED'])
-    }
+    } 
 
 
 
@@ -140,4 +138,4 @@ setInterval(() => {
     chrome.runtime.sendMessage(['DISCONNECTED'])
   }
 
-}, 1000)
+}, 3000)
