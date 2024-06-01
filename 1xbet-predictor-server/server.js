@@ -20,6 +20,7 @@ let hours = 1
 const threads = [{ thread: 'thread_1', bet: false, status: 'initial' }, { thread: 'thread_2', bet: false, status: 'initial', }, { thread: 'thread_3', bet: false, status: 'initial', }]
 let threadInfo
 let Timer
+var timestampLog = '[' + Date.now() + '] ';
 
 const MainTimer = (duration, task) => {
   let startTime = Math.floor(Date.now() / 1000);
@@ -28,43 +29,28 @@ const MainTimer = (duration, task) => {
     const currentTime = Math.floor(Date.now() / 1000);
     const seconds = currentTime - startTime;
 
-    console.log(startTime, currentTime, seconds);
-
     if (seconds >= duration) {
       task();
       startTime = Math.floor(Date.now() / 1000); // Restart the timer by resetting startTime
-    
+
     }
-    
+
   }, 1000);
 
   return timerId
 };
 
-// // Example usage
-// const task = () => {
-//   console.log("Task executed");
-// };
-
-// const duration = 5; // Duration in seconds
-// const timerId = MainTimer(duration, task);
-
-// console.log('Timer ID:', timerId);
-
-
 wss.on('connection', async (ws) => {
-  console.log('Client connected');
+  console.log(timestampLog, ' Client connected. Ip Address ==> ', ws._socket.remoteAddress);
   clients.push(ws);
   let query = 'SELECT * FROM data ORDER BY id DESC limit 10'
   let params = []
   await db.all(query, params, async (err, data) => {
     if (err) throw console.err(err)
-    // console.log(JSON.stringify(data))
     let query = 'SELECT * FROM bets'
     let params = []
     await db.all(query, params, (err, bets) => {
       if (err) throw console.err(err)
-      // console.log(JSON.stringify(data))
       ws.send(JSON.stringify(['INITIAL_BETS', bets]))
     })
     ws.send(JSON.stringify(['INITIAL_CRASH', data]))
@@ -74,22 +60,18 @@ wss.on('connection', async (ws) => {
   params = []
   await db.all(query, params, (err, data) => {
     if (err) throw console.err(err)
-    // console.log(JSON.stringify(data))
-    // console.log(data)
     threadInfo = data
 
   })
-  console.log(threadInfo)
-  // [message, crashPoint, rounds, days, hours  ]
+  console.log(timestampLog, ' ', threadInfo.toString())
 
   ws.on('message', (data) => {
     // event data to array
     dataString = data.toString().split(',')
-    console.log(dataString)
-
+    console.log(timestampLog, ' Incoming Data : ', dataString.toString())
     if (dataString[0] == 'TIMER_START') {
+console.log(timestampLog, ' Betting Timer Started.')
 
-      console.log('Incoming Data :', dataString)
       // set config data
       crashPoint = dataString[1]
       rounds = dataString[2]
@@ -98,27 +80,18 @@ wss.on('connection', async (ws) => {
 
       // Register the Timer
 
-     Timer =  MainTimer(60*28, ()=>{
-        console.log('Refreshing ...')
-        console.log('Threads : ', threads)
+      Timer = MainTimer(60 * 28, () => {
+        console.log(timestampLog, ' Refreshing the status of threads.')
         for (let i of threads) {
           i.bet = true
           i.status = 'ready'
         }
       })
-      // Timer = setInterval(() => {
-      //   console.log('Refreshing ...')
-      //   console.log('Threads : ', threads)
-      //   for (let i of threads) {
-      //     i.bet = true
-      //     i.status = 'ready'
-      //   }
-      // }, 2*60*1000)
-      console.log('Timer has started...')
 
     } else if (dataString[0] == 'BET') {
+      console.log(timestampLog, ' Bet event detected. Ip address ==> ',  ws._socket.remoteAddress)
       for (let i of threads) {
-        if(i.status == 'pending'){
+        if (i.status == 'pending') {
           break
         }
         if (i.bet && (i.status != 'pending')) {
@@ -127,9 +100,10 @@ wss.on('connection', async (ws) => {
           let query = `SELECT * FROM threads WHERE thread = '${i.thread}' `
           db.all(query, [], (err, data) => {
             if (err) throw console.error(err)
-            console.log(data)
+            console.log(timestampLog, ' Sending Data : ', threads.toString())
             clients.forEach(function (client) {
               client.send(JSON.stringify(['BET', i.thread, data[0].value]));
+
             });
           })
 
@@ -137,14 +111,15 @@ wss.on('connection', async (ws) => {
         }
 
       }
-      console.log('Sent Data : ', threads)
+      
     } else if (dataString[0] == 'RESULT') {
-      console.log('Incoming results : ', dataString)
+      console.log(timestampLog, ' Incoming betting results : ', dataString.toString())
       // ['RESULT', 'thread_1', 'win']
       if (dataString[2] == 'lost') {
+        console.log(timestampLog, ` The ${dataString[1]} was lost.`)
         let lostThreadIndex
-        for (let i of threads){
-          if(i.thread == dataString[1]){
+        for (let i of threads) {
+          if (i.thread == dataString[1]) {
             lostThreadIndex = threads.indexOf(i)
 
           }
@@ -154,28 +129,26 @@ wss.on('connection', async (ws) => {
         threads.splice(lostThreadIndex, 1)
         let query = `UPDATE threads SET status = false WHERE thread = '${dataString[1]}' `
         db.run(query, (err) => {
-          if (err) throw console.log(err)
-           
+          if (err) throw console.log(timestampLog, 'Error: ', err)
+          console.log(timestampLog, ' The data of the lost thread is updated on the database.')
         })
-        console.log(threads)
 
       } else if (dataString[2] == 'win') {
         let query = `SELECT * FROM threads WHERE thread = '${dataString[1]}' `
         db.all(query, [], (err, data) => {
           if (err) throw console.error(err)
-          console.log(data)
           let query = `UPDATE threads SET value = ${data[0].value * 1.01} , rounds = ${data[0].rounds + 1} WHERE thread = '${dataString[1]}' `
           db.run(query, (err) => {
-            if (err) throw console.log(err)
-              for (let i of threads){
-                if(i.thread == dataString[1]){
-                  i.bet = false
-                  i.status = 'betted'
-      
-                }
-      
-      
+            if (err) throw console.log(timestampLog, 'Error: ', err)
+            for (let i of threads) {
+              if (i.thread == dataString[1]) {
+                i.bet = false
+                i.status = 'betted'
+                console.log(timestampLog, ' The data of the win thread is updated.')
               }
+
+
+            }
           })
 
         });
@@ -183,16 +156,16 @@ wss.on('connection', async (ws) => {
       let query = `SELECT * FROM threads WHERE thread = '${dataString[1]}' `
       db.all(query, [], (err, data) => {
         if (err) throw console.error(err)
-      let query = `INSERT INTO bets(win, crash_point, acual_crash_point, thread, rounds, value) VALUES(${dataString[2] == 'win' ? 'true' : 'false'}, 1.01, ${dataString[3]}, '${dataString[1]}', ${data[0].rounds}, ${data[0].value} )`
-    db.run(query, (err)=>{
-      if(err) throw console.log(err)
-    })
+        let query = `INSERT INTO bets(win, crash_point, acual_crash_point, thread, rounds, value) VALUES(${dataString[2] == 'win' ? 'true' : 'false'}, 1.01, ${dataString[3]}, '${dataString[1]}', ${data[0].rounds}, ${data[0].value} )`
+        db.run(query, (err) => {
+          if (err) throw console.log(timestampLog, 'Error: ', err)
+        })
       })
 
 
     } else if (dataString[0] == 'TIMER_END') {
       // stop the timer
-      console.log('Timer has stopped...')
+      console.log(timestampLog, ' Timer has stopped.')
       clearInterval(Timer == undefined ? null : Timer)
     } else if (dataString[0] == 'DATA') {
 
@@ -204,9 +177,8 @@ wss.on('connection', async (ws) => {
       let risk = lossRecords != 0 ? lossRecords / totalrecords * 100 : 0
       let query = 'INSERT INTO data(timestamp, crash_point, pre_crash_point, predict_crash_point, risk_at) VALUES(?,?,?,?,?)'
       let params = [dataString[1], dataString[3], pre_crash_point, 0.0, risk]
-      console.log(params, dataString, totalrecords, lossRecords, risk)
       db.run(query, params, (err) => {
-        if (err) throw console.log(err)
+        if (err) throw console.log(timestampLog, 'Error: ', err)
       })
 
 
@@ -217,8 +189,8 @@ wss.on('connection', async (ws) => {
       clients.forEach(function (client) {
         client.send(JSON.stringify(['STREAM', record]));
       });
-    }else  if (dataString[0] == 'CRASH'){
-      console.log('crashed!')
+    } else if (dataString[0] == 'CRASH') {
+      console.log(timestampLog, ' Crash event triggerd.')
       clients.forEach(function (client) {
         client.send(JSON.stringify(dataString));
       });
@@ -229,7 +201,7 @@ wss.on('connection', async (ws) => {
 
 
   ws.on('close', () => {
-    console.log('Client disconnected');
+    console.log(timestampLog, ' Client disconnected. Ip address ==> ', ws._socket.remoteAddress);
 
   });
 });

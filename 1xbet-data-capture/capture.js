@@ -13,6 +13,7 @@ async function getWsEndpoint() {
 let start
 let end
 let crash
+var timestampLog = '[' + Date.now() + '] ';
 
 const data = []
 
@@ -64,7 +65,7 @@ const ws = new WebSocket(process.env.WS_SERVER);
         bids.push(payload)
         if(!bet){
           ws.send(['BET'].toString())
-          console.log('betting...')
+          console.log(timestampLog, ' OnBets Event triggered.')
           bet = true
         }
        
@@ -106,7 +107,7 @@ const ws = new WebSocket(process.env.WS_SERVER);
         const { f, ts } = payload.arguments[0];
         crash = f
         end = ts
-        console.log(`${timestamp} >> ${f}, ${start}, ${ts}`);
+        console.log(`${timestampLog} ${f}, ${start}, ${ts}`);
         const csvData = `${f},${start},${ts}\n`;
         ws.send(['CRASH',f].toString())
 
@@ -116,7 +117,7 @@ const ws = new WebSocket(process.env.WS_SERVER);
       }
      
     } catch (error) {
-      console.error('Error processing WebSocket frame:', error);
+      console.error(timestampLog, 'Error processing WebSocket frame:', error);
     }
   });
 
