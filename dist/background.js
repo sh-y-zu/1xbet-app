@@ -43,7 +43,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 var socket;
 function connectWebSocket() {
-    socket = new WebSocket('ws://localhost:8080');
+    socket = new WebSocket('ws://5.104.81.194:5000/');
     socket.onopen = function () {
         console.log('WebSocket connection opened');
     };
