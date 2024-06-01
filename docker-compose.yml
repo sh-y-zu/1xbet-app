@@ -11,3 +11,5 @@ services:
     image: "shehandezen/game-capture"
     environment: 
       - WS_SERVER=http://server:5000
+    depends_on:
+      - server
