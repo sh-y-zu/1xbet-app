@@ -49,7 +49,7 @@ window.onload = () => {
         }, inputClickDelay);
 
         setTimeout(function () {
-          inputField.value = message[2]
+          inputField.value = Math.round( parseInt(message[2]) * 100) / 100
         }, inputDelay);
 
         setTimeout(function () {
