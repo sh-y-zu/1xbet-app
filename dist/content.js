@@ -61,7 +61,7 @@ window.onload = () => {
 
 
     if (message[0] == 'BET' && round.rounds == 0) {
-      if (!waitConnection) {
+    
         setTimeout(function () {
           autobetSelect.dispatchEvent(clickEvent);
           baseStakeInput.autocomplete = 'on'
@@ -83,9 +83,7 @@ window.onload = () => {
         round.status = true
 
 
-      } else {
-        chrome.runtime.sendMessage(['NOT_START_AUTOBET'])
-      }
+    
 
 
 
